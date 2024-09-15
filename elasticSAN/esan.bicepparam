@@ -24,7 +24,7 @@ param elasticSan = {
     name: 'volumeGroup1'
     protocolType: 'Iscsi'
     subnetIds: [
-      '/subscriptions/0b5d0018-2879-4810-b8d7-4f8dda5ce0b9/resourceGroups/arg-syd-lz-prd-network/providers/Microsoft.Network/virtualNetworks/vnt-syd-lz-prd-10.15.0.0_24/subnets/app'
+      '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/arg-syd-lz-prd-network/providers/Microsoft.Network/virtualNetworks/vnt-syd-lz-prd-10.15.0.0_24/subnets/app'
     ]
   }
   volumes: [

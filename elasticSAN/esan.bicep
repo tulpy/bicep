@@ -35,11 +35,10 @@ resource eSan 'Microsoft.ElasticSan/elasticSans@2024-05-01' = {
   resource volumeGroup 'volumegroups@2024-05-01' = {
     name: toLower(elasticSan.volumeGroup.name)
     properties: {
-      protocolType: 'Iscsi'
+      protocolType: elasticSan.volumeGroup.protocolType
       networkAcls: {
         virtualNetworkRules: [
           for subnetId in elasticSan.volumeGroup.subnetIds: {
-            action: 'Allow'
             id: subnetId
           }
         ]
@@ -71,19 +70,14 @@ type elasticSanType = {
   @maxLength(24)
   @description('Required. Specify the name of the Elastic SAN resource.')
   name: string
-
   @description('Required. Base size of the Elastic San appliance in TiB..')
   baseSizeTiB: int
-
   @description('Required. Extended size of the Elastic San appliance in TiB..')
   extendedCapacitySizeTiB: int
-
   @description('Required. Specify the name of the Elastic SAN SKU.')
   skuName: 'Premium_LRS' | 'Premium_ZRS'
-
   @description('Optional. Logical zone for Elastic San resource; example: ["1"].')
   availabilityZones: array?
-
   @description('Optional. Allow or disallow public network access to ElasticSan. Value is optional but if passed in, must be "Enabled" or "Disabled".')
   publicNetworkAccess: 'Disabled' | 'Enabled'
 
@@ -93,20 +87,16 @@ type elasticSanType = {
     @maxLength(63)
     @description('Required. The name of the Elastic SAN Volume Group.')
     name: string
-
     @description('Optional. Type of storage target.')
     protocolType: 'Iscsi' | 'None'
-
     @description('Optional. Specify the name of the subnet Ids for access to the Elastic SAN volume group.')
     subnetIds: array
   }
 
   @description('Required. Specify the name of the Elastic SAN Volume array.')
   volumes: {
-
     @description('Required. Specify the name of the Elastic SAN volume.')
     name: string
-
     @description('Required. The size of the volume.')
     sizeGiB: int
   }[]
