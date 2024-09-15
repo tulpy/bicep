@@ -1,0 +1,99 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "elasticSans_test_name": {
+            "defaultValue": "test",
+            "type": "String"
+        },
+        "virtualNetworks_vnt_syd_lz_prd_10_15_0_0_24_externalid": {
+            "defaultValue": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/arg-syd-lz-prd-network/providers/Microsoft.Network/virtualNetworks/vnt-syd-lz-prd-10.15.0.0_24",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.ElasticSan/elasticSans",
+            "apiVersion": "2024-05-01",
+            "name": "[parameters('elasticSans_test_name')]",
+            "location": "australiaeast",
+            "tags": {
+                "environment": "sbx",
+                "applicationName": "Microsoft Elastic SAN",
+                "owner": "Stephen Tulp",
+                "criticality": "Tier1",
+                "costCenter": "1234",
+                "contactEmail": "stephen.tulp@xxxxxxxxxxx.onmicrosoft.com",
+                "dataClassification": "Internal",
+                "iac": "Bicep"
+            },
+            "properties": {
+                "publicNetworkAccess": "Enabled",
+                "sku": {
+                    "name": "Premium_LRS",
+                    "tier": "Premium"
+                },
+                "availabilityZones": [],
+                "baseSizeTiB": 2,
+                "extendedCapacitySizeTiB": 5
+            }
+        },
+        {
+            "type": "Microsoft.ElasticSan/elasticSans/volumeGroups",
+            "apiVersion": "2024-05-01",
+            "name": "[concat(parameters('elasticSans_test_name'), '/volumegroup1')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ElasticSan/elasticSans', parameters('elasticSans_test_name'))]"
+            ],
+            "properties": {
+                "networkAcls": {
+                    "virtualNetworkRules": [
+                        {
+                            "action": "Allow",
+                            "id": "[concat(parameters('virtualNetworks_vnt_syd_lz_prd_10_15_0_0_24_externalid'), '/subnets/app')]"
+                        }
+                    ]
+                },
+                "protocolType": "iSCSI",
+                "encryption": "EncryptionAtRestWithPlatformKey"
+            }
+        },
+        {
+            "type": "Microsoft.ElasticSan/elasticSans/volumeGroups/volumes",
+            "apiVersion": "2024-05-01",
+            "name": "[concat(parameters('elasticSans_test_name'), '/volumegroup1/volume1')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ElasticSan/elasticSans/volumeGroups', parameters('elasticSans_test_name'), 'volumegroup1')]",
+                "[resourceId('Microsoft.ElasticSan/elasticSans', parameters('elasticSans_test_name'))]"
+            ],
+            "properties": {
+                "managedBy": {
+                    "resourceId": "None"
+                },
+                "creationData": {
+                    "createSource": "None"
+                },
+                "sizeGiB": 500
+            }
+        },
+        {
+            "type": "Microsoft.ElasticSan/elasticSans/volumeGroups/volumes",
+            "apiVersion": "2024-05-01",
+            "name": "[concat(parameters('elasticSans_test_name'), '/volumegroup1/volume2')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ElasticSan/elasticSans/volumeGroups', parameters('elasticSans_test_name'), 'volumegroup1')]",
+                "[resourceId('Microsoft.ElasticSan/elasticSans', parameters('elasticSans_test_name'))]"
+            ],
+            "properties": {
+                "managedBy": {
+                    "resourceId": "None"
+                },
+                "creationData": {
+                    "createSource": "None"
+                },
+                "sizeGiB": 500
+            }
+        }
+    ]
+}

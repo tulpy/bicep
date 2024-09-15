@@ -1,0 +1,1 @@
+New-AzResourceGroupDeployment -ResourceGroupName alertsRG -TemplateFile .\esan.bicep -TemplateParameterFile .\esan.bicepparam
