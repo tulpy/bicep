@@ -1,0 +1,137 @@
+---
+name: Release
+
+on:
+  push:
+    branches:
+      - main # Trigger the workflow on push or pull request to main
+  workflow_dispatch: {} # Allow manual triggering of the workflow
+
+env:
+  PSRULE_DIRECTORY: ./ # The directory where the PSRule configuration file is located
+  INFRA_WORKING_DIRECTORY: ./ # The directory where the infrastructure artefacts are located
+
+concurrency:
+  group: 'release' # Ensure only one workflow is running at a time
+  cancel-in-progress: true # Cancel previous runs if a new one is triggered
+
+jobs:
+  linting:
+    name: Lint Testing
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read # Required to read the repository's contents
+      packages: read # Required to read the repository's packages
+      statuses: write # Required to update the commit status
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Linting
+      - name: Lint Testing
+        uses: super-linter/super-linter@v6
+        env:
+          DEFAULT_BRANCH: 'main'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_JSON: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_POWERSHELL: true
+          VALIDATE_YAML: true
+          FILTER_REGEX_EXCLUDE: .*/(src/modules/[^/]+|docs/wiki/(Bicep|PS-Rule|Scripts|Pricing|Policy)).*\.md$
+
+  ps-rule:
+    runs-on: ubuntu-latest
+    name: Run PSRule Tests
+    permissions:
+      contents: read
+    steps:
+      - name: Check-Out Repository
+        uses: actions/checkout@v4
+
+      - name: Run PSRule Validation
+        continue-on-error: true # This is to ensure that the workflow does not stop the next step while the modules are cleaned up
+        uses: ./.github/actions/ps-rule
+        with:
+          option: 'ps-rule.yaml'
+          bicepPath: 'src/orchestration'
+          path: ${{ env.PSRULE_DIRECTORY }}
+
+  generate-doc:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    steps:
+      # Check-Out Repo
+      - name: Check-Out Repository
+        uses: actions/checkout@v4
+
+      # Install Pandoc
+      - name: Install Pandoc
+        uses: ./.github/actions/pandoc
+        with:
+          version: 3.1.12.2
+
+      # Run Convert-WikiMarkdowntoWord.ps1
+      - name: Run ./scripts/Convert-WikiMarkdowntoWord.ps1
+        uses: azure/powershell@v2
+        with:
+          inlineScript: |
+            Write-Information "==> Running script..." -InformationAction Continue
+            ./scripts/Convert-WikiMarkdowntoWord.ps1
+          azPSVersion: 'latest'
+
+      # Upload the documentation to the repository
+      - name: Upload Documentation as artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Word Documentation
+          path: docs/*.docx
+
+  build-infrastructure:
+    name: Build
+    runs-on: ubuntu-latest
+    needs:
+      - linting
+      - ps-rule
+      - generate-doc
+    steps:
+      - name: Check-Out Repository
+        uses: actions/checkout@v4
+
+      # Bicep Build
+      - name: Bicep Build
+        uses: Azure/cli@v1.0.7
+        with:
+          inlineScript: |
+            export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+            az bicep build -f ./src/orchestration/main.bicep --stdout
+            az bicep build -f ./src/orchestration/apim/apim.bicep --stdout
+
+      # Copy Files for artefact Upload
+      - name: Copy Files for artefact Upload
+        run: rsync -av --exclude='build' --exclude={'.vscode/','.ps-rule/','.ps-docs/','*.md'} ./. ./build
+        working-directory: ${{ env.INFRA_WORKING_DIRECTORY }}
+
+      # Upload artefact for deployment job
+      - name: Upload artefact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: infrastructure
+          path: ${{ env.INFRA_WORKING_DIRECTORY }}/build
+
+  # If you need additional  environments, make a copy of the code block below and update at least the environmentName for each environment.
+  deploy_Sbx:
+    name: Sandbox
+    uses: ./.github/workflows/deploy.yml
+    concurrency: 'deploy'
+    needs:
+      - build-infrastructure
+    with:
+      artefactName: infrastructure
+      environmentName: sbx
+      location: ${{ vars.LOCATION }}
+      moduleName: 'Insight-Path-AI'
+    secrets: inherit

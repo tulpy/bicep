@@ -1,0 +1,144 @@
+---
+name: Repository Management
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: repository-managements
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  # This job is used to update the repository's wiki.
+  wiki:
+    name: 'Publish wiki from docs/wiki'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: spenserblack/actions-wiki@v0.3.0
+        with:
+          path: docs/wiki
+
+  # This job is used to update and close out stale pull requests.
+  stale:
+    name: 'Mark stale pull requests'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark Stale Pull Requests
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-pr-stale: 14
+          days-before-pr-close: 365
+          stale-pr-label: inactive
+          close-pr-label: auto-close
+          exempt-pr-labels: keep-open
+          stale-pr-message: >
+            This pull request has been inactive for 14 days.
+            If you are finished with your changes, don't forget to get your PR reviewed and merged.
+
+            👨‍💻 Insight cloud Platform Engineering Team
+          close-pr-message: >
+            This pull request has been inactive for 365 days. At this time, we are closing the PR.
+            If you decide to continue working on your change, you can reopen the PR and continue working. Thank you!
+
+            👨‍💻 Insight Cloud Platform Engineering Team
+
+  # This job is used to run the Bicep build and lint tests.
+  bicep_unit_tests:
+    name: Bicep Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout Repo
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # List Bicep Version
+      - name: List Currently Installed Bicep Version
+        shell: pwsh
+        run: |
+          $bicepVersion = bicep --version
+          Write-Information "=====> Currently installed Bicep version is: $bicepVersion <=====" -InformationAction Continue
+
+      # Install Bicep
+      - name: Install Latest Version of Bicep
+        shell: sh
+        run: |
+          # From https://docs.microsoft.com/en-us/azure/azure-resource-manager/bicep/install#linux
+          # Fetch the latest Bicep CLI binary
+          curl -Lo bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
+          # Mark it as executable
+          chmod +x ./bicep
+          # Add bicep to your PATH (requires admin)
+          sudo mv ./bicep /usr/local/bin/bicep
+          # Verify you can now access the 'bicep' command
+          bicep --help
+          # Done!
+
+      # List Bicep Version
+      - name: List Now Installed Bicep Version
+        shell: pwsh
+        run: |
+          $bicepVersion = bicep --version
+          Write-Information "=====> Now installed Bicep version is: $bicepVersion <=====" -InformationAction Continue
+
+      # Run a Bicep build and Lint all Modules
+      - name: Build & Lint All Modules
+        shell: pwsh
+        run: |
+          $output = @()
+          Get-ChildItem -Recurse -Filter '*.bicep' | ForEach-Object {
+              Write-Information "==> Attempting Bicep Build For File: $_" -InformationAction Continue
+              $bicepOutput = bicep build $_.FullName 2>&1
+              if ($LastExitCode -ne 0)
+              {
+                foreach ($item in $bicepOutput) {
+                  $output += "$($item) `r`n"
+                }
+              }
+              else
+              {
+                echo "✅ Bicep Build Successful for File: $_"
+              }
+          }
+          if ($output.length -gt 0) {
+            throw $output
+          }
+
+      # Create GitHub Issue for Bicep Build Failures
+      - name: Create GitHub Issue with Bicep Build & Lint Failures
+        if: ${{ failure() }}
+        run: |
+          gh issue create --title "❌ Daily Bicep Build & Lint Workflow Failed " --body "Check the latest run of the Daily Bicep Build & Lint Workflow for details in the Actions tab."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # This job is used to update the release draft.
+  update_release_draft:
+    name: Update Release Draft
+    permissions:
+      # write permission is required to create a github release
+      contents: write
+      # write permission is required for autolabeler
+      # otherwise, read permission is required at least
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      # Drafts your next Release notes as Pull Requests are merged into "master"
+      - uses: release-drafter/release-drafter@v6
+        # (Optional) specify config name to use, relative to .github/. Default: release-drafter.yml
+        with:
+          config-name: actions/release-drafter/config.yaml
+          # disable-autolabeler: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

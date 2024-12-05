@@ -1,0 +1,29 @@
+name: 'Run PSRule Tests'
+description: 'Run PSRule tests over module bicep files'
+
+inputs:
+  bicepPath:
+    description: The directory in which PSRule gets the bicep files from
+    required: true
+  path:
+    description: The root directory in which to run the PSRule tests on
+    required: true
+  option:
+    description: The custom ps-rule.yaml file for GitHub Actions
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: PSRule Test
+      uses: Microsoft/ps-rule@v2.9.0
+      with:
+        option: ${{ inputs.option }}
+        inputType: inputPath
+        inputPath: '${{ inputs.bicepPath }}/'
+        path: '${{ inputs.path }}'
+        modules: PSRule.Rules.Azure
+        outcome: All
+        baseline: Azure.Default
+        outputFormat: NUnit3
+        outputPath: reports/ps-rule-results.xml

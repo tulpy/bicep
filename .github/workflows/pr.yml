@@ -1,0 +1,168 @@
+---
+name: PR
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - main
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  PSRULE_DIRECTORY: ./
+  INFRA_WORKING_DIRECTORY: ./
+  currencyCode: 'AUD'
+  location: 'australiaeast'
+
+jobs:
+  linting:
+    name: Lint Testing
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Linting
+      - name: Lint Testing
+        uses: super-linter/super-linter@v6
+        env:
+          DEFAULT_BRANCH: 'main'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_JSON: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_POWERSHELL: true
+          VALIDATE_YAML: true
+          FILTER_REGEX_EXCLUDE: .*/(src/modules/[^/]+|docs/wiki/(Bicep|PS-Rule|Scripts|Pricing|Policy)).*\.md$
+
+  markdown-links:
+    name: Validate Markdown Links
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Validate Markdown Links
+      - name: Check Links in Markdown Files
+        uses: gaurav-nelson/github-action-markdown-link-check@1.0.15
+        with:
+          config-file: '.github/linters/markdown-link-check.json'
+          check-modified-files-only: 'yes'
+          use-verbose-mode: 'yes'
+          use-quiet-mode: 'yes'
+          base-branch: main
+
+  run-psrule-tests-modules:
+    runs-on: ubuntu-latest
+    name: Run PSRule Tests [Modules]
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: PSRule >> Modules
+        continue-on-error: true # This is to ensure that the workflow does not stop the next step while the modules are cleaned up
+        uses: ./.github/actions/ps-rule
+        with:
+          option: 'ps-rule.yaml'
+          bicepPath: 'src/modules'
+          path: ${{ env.PSRULE_DIRECTORY }}
+
+  run-psrule-tests-orchestration:
+    runs-on: ubuntu-latest
+    name: Run PSRule Tests [Orchestration]
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: PSRule >> Orchestration
+        continue-on-error: true # This is to ensure that the workflow does not stop the next step while the modules are cleaned up
+        uses: ./.github/actions/ps-rule
+        with:
+          option: 'ps-rule.yaml'
+          bicepPath: 'src/orchestration'
+          path: ${{ env.PSRULE_DIRECTORY }}
+
+  PS-Docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # Checkout Repo
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Checkout PR
+      - name: Checkout Pull Request
+        run: |
+          echo "==> Check out Pull Request"
+          gh pr checkout ${{ github.event.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Configure Git
+      - name: Configure Git
+        run: |
+          git config user.name github-actions
+          git config user.email action@github.com
+
+      # Run Get-AzurePricingforSolution.ps1
+      - name: Run ./scripts/Get-AzurePricingforSolution.ps1
+        uses: azure/powershell@v2
+        with:
+          inlineScript: |
+            Write-Information "==> Running script..." -InformationAction Continue
+            ./scripts/Get-AzurePricingforSolution.ps1 -location ${{env.location}} -currencyCode ${{env.currencyCode}}
+          azPSVersion: 'latest'
+
+      # Run Set-Documentation.ps1
+      - name: Run ./scripts/Set-Documentation.ps1
+        uses: azure/powershell@v2
+        with:
+          inlineScript: |
+            Write-Information "==> Installing needed modules..." -InformationAction Continue
+            Install-Module -Name powershell-yaml -Force -SkipPublisherCheck
+            Install-Module -Name PSDocs -Force -SkipPublisherCheck
+            Install-Module -Name PSDocs.Azure -Force -SkipPublisherCheck
+            Write-Information "==> Running script..." -InformationAction Continue
+            ./scripts/Set-Documentation.ps1
+          azPSVersion: 'latest'
+
+      # Check for changes
+      - name: Check for changes
+        id: git_status
+        run: |
+          CHECK_GIT_STATUS=($(git status -s))
+          git status -s
+          echo "changes=${#CHECK_GIT_STATUS[@]}" >> $GITHUB_OUTPUT
+
+      # Git Commit & Push
+      - name: Git Commit & Push (${{ github.event.pull_request.head.repo.full_name }})
+        if: steps.git_status.outputs.changes > 0
+        run: |
+          git config core.autocrlf false
+          git add --all
+          git commit -m 'Generation of documentation - ${{ github.event.number }} (automated)'
+          git push

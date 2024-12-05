@@ -1,0 +1,31 @@
+name: 'Bicep Build'
+description: 'Build Bicep template and if required upload as an artefact'
+
+inputs:
+  moduleName:
+    description: 'Bicep Module Name'
+    required: true
+  templateFile:
+    description: 'Bicep template file'
+    required: true
+  uploadArtefact:
+    description: 'Upload Artefact'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Bicep Build
+      uses: Azure/cli@v2.0.0
+      with:
+        inlineScript: |
+          az config set bicep.use_binary_from_path=False
+          az bicep build -f ${{ inputs.templateFile }} --stdout
+
+    - name: Upload Artefact ${{ inputs.moduleName }}
+      if: ${{ inputs.uploadArtefact == 'true' }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.moduleName }}
+        path: ${{ inputs.templateFile }}
