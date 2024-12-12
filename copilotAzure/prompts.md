@@ -2,6 +2,12 @@
 
 ## Git Hub Copilot for Azure
 
+* Vs Code interface
+* Extensions
+* @Azure
+* Chat Windows
+* Zen Mode
+
 ### Azure Resources
 
 How many resources do I have in Azure?
