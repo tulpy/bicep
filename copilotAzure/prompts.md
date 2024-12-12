@@ -1,4 +1,4 @@
-# Promopts
+# Prompts
 
 ## Git Hub Copilot for Azure
 
@@ -27,6 +27,22 @@ What is the difference between Azure Front Door and App Gateway?
 Whats the difference between ACA and AKS
 
 ### Azure Arc
+
+### Deploying
+
+do you have a sample or template with ACA and Azure AI with python or javascript
+
+I need to migrate a sql server to Azure. We have about 10tb of records. HIPPA compliance is a must. We can only afford 3 hours of downtime for the migration and are using SQL Server 2016. WE use about 5000 transactions an hour. What SQL service do you recommend?
+
+outline a migration plan
+
+### Operating
+
+azure /helpto see what kinds of things azure can do
+azure /learnto learn about Azure
+azure /resourcesfor info on your Azure resources
+azure /diagnose to figure out what’s wrong with your applications
+azure /changeTenantto choose the Azure tenant you want to use
 
 ## Custom instructions
 
