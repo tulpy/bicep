@@ -39,7 +39,7 @@ env:
   location: ${{ inputs.location }} # location for resource deployment in azure
   test_subscription_id: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9" # azure subscription id (not required for tenant level deployments)
   prod_subscription_id: "" # azure subscription id (not required for tenant level deployments)
-  oidc_app_reg_client_id: "" # client id of the azure application registration used to authenticate to azure using oidc, refer to https://learn.microsoft.com/en-us/azure/active-directory/develop/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#github-actions
+  oidc_app_reg_client_id: "a7164fc2-e53c-48a0-8ef8-13c558a9ea95" # client id of the azure application registration used to authenticate to azure using oidc, refer to https://learn.microsoft.com/en-us/azure/active-directory/develop/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#github-actions
   azure_tenant_id: "a2ebc691-c318-4ec2-998a-a87c528378e0" # azure ad tenant/directory id
   solutionShortName: ${{ inputs.workloadShortName }}
   workloadTier: "global"
