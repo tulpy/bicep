@@ -1,0 +1,89 @@
+---
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      artefactName:
+        required: true
+        type: string
+        default: artefact
+      environment:
+        required: true
+        type: string
+      location:
+        required: true
+        type: string
+      moduleName:
+        required: true
+        type: string
+
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+
+permissions:
+  contents: read # Required to read the repository's contents
+  id-token: write # This is required for azure/login
+
+env:
+  deploymentJobId: ${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }} # Unique ID for the deployment job
+
+jobs:
+  deploy:
+    name: ${{ inputs.moduleName }}
+    environment: ${{ inputs.environmentName }}
+    runs-on: windows-latest
+    continue-on-error: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Az Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          allow-no-subscriptions: true
+          enable-AzPSSession: true
+
+      - name: Set PAL
+        uses: Azure/cli@v2
+        with:
+          inlineScript: |
+            az extension add --name managementpartner
+            az managementpartner update --partner-id 1158331 || az managementpartner create --partner-id 1158331
+
+      # Preview Changes
+      - name: Validate
+        uses: azure/bicep-deploy@v2
+        with:
+          operation: validate
+          type: deployment
+          name: main-${{env.deploymentJobId}}
+          location: ${{inputs.location}}
+          scope: subscription
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          parameters-file: ./deployment/parameters.bicepparam
+          parameters: '{"name": "Development", "tags": { "environment": "development" }}'
+
+      - name: Deploy
+        uses: azure/bicep-deploy@v2
+        with:
+          operation: create
+          type: deployment
+          name: main-${{env.deploymentJobId}}
+          location: ${{inputs.location}}
+          scope: subscription
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          template-file: ./src/orchestration/main.bicep
+          parameters-file: ./src/configuration/main.${{inputs.environmentName}}.bicepparam
+
+      # Log out of Azure
+      - name: Az Logout
+        run: az logout

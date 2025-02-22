@@ -12,7 +12,7 @@ env:
   INFRA_WORKING_DIRECTORY: ./ # The directory where the infrastructure artefacts are located
 
 concurrency:
-  group: 'release' # Ensure only one workflow is running at a time
+  group: "release" # Ensure only one workflow is running at a time
   cancel-in-progress: true # Cancel previous runs if a new one is triggered
 
 jobs:
@@ -35,7 +35,7 @@ jobs:
       - name: Lint Testing
         uses: super-linter/super-linter@v6
         env:
-          DEFAULT_BRANCH: 'main'
+          DEFAULT_BRANCH: "main"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JSON: true
           VALIDATE_MARKDOWN: true
@@ -56,8 +56,8 @@ jobs:
         continue-on-error: true # This is to ensure that the workflow does not stop the next step while the modules are cleaned up
         uses: ./.github/actions/ps-rule
         with:
-          option: 'ps-rule.yaml'
-          bicepPath: 'src/orchestration'
+          option: "ps-rule.yaml"
+          bicepPath: "src/orchestration"
           path: ${{ env.PSRULE_DIRECTORY }}
 
   generate-doc:
@@ -81,7 +81,7 @@ jobs:
           inlineScript: |
             Write-Information "==> Running script..." -InformationAction Continue
             ./scripts/Convert-WikiMarkdowntoWord.ps1
-          azPSVersion: 'latest'
+          azPSVersion: "latest"
 
       # Upload the documentation to the repository
       - name: Upload Documentation as artefact
@@ -126,12 +126,12 @@ jobs:
   deploy_Sbx:
     name: Sandbox
     uses: ./.github/workflows/deploy.yml
-    concurrency: 'deploy'
+    concurrency: "deploy"
     needs:
       - build-infrastructure
     with:
       artefactName: infrastructure
       environmentName: sbx
       location: ${{ vars.LOCATION }}
-      moduleName: 'Insight-Path-AI'
+      moduleName: "Insight-Path-AI"
     secrets: inherit

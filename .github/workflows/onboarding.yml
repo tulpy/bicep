@@ -1,0 +1,136 @@
+name: Resource Group Deployment Onboarding
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Please select the environment to deploy the resources"
+        type: choice
+        required: True
+        options:
+          - "sbx"
+          - "dev"
+          - "tst"
+          - "prd"
+
+      location:
+        description: "Please select the location to deploy the resources"
+        type: choice
+        required: True
+        options:
+          - australiaeast
+          - australiasoutheast
+
+      workloadShortName:
+        description: "Workload Short Name"
+        type: string
+        required: True
+        default: ""
+
+      gitRepoName:
+        description: "Git Repository Name"
+        type: string
+        required: True
+        default: ""
+
+env:
+  service_tier: global
+  environment: ${{ inputs.environment }} # path to directory containing bicep template
+  location: ${{ inputs.location }} # location for resource deployment in azure
+  test_subscription_id: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9" # azure subscription id (not required for tenant level deployments)
+  prod_subscription_id: "" # azure subscription id (not required for tenant level deployments)
+  oidc_app_reg_client_id: "" # client id of the azure application registration used to authenticate to azure using oidc, refer to https://learn.microsoft.com/en-us/azure/active-directory/develop/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#github-actions
+  azure_tenant_id: "a2ebc691-c318-4ec2-998a-a87c528378e0" # azure ad tenant/directory id
+  solutionShortName: ${{ inputs.workloadShortName }}
+  workloadTier: "global"
+  spDevName: "dc-github-azure-${{ inputs.workloadShortName }}-dev"
+  spProdName: "dc-github-azure-${{ inputs.workloadShortName }}-prod"
+
+jobs:
+  initialise_vars:
+    runs-on: windows-latest
+    outputs:
+      service_tier: ${{ env.service_tier }}
+      test_subscription_id: ${{ env.test_subscription_id }}
+      prod_subscription_id: ${{ env.prod_subscription_id }}
+      location: ${{ env.location }}
+      oidc_app_reg_client_id: ${{ env.oidc_app_reg_client_id }}
+      azure_tenant_id: ${{ env.azure_tenant_id }}
+      workloadTier: ${{ env.workloadTier }}
+      solutionShortName: ${{ env.solutionShortName }}
+    steps:
+      - name: Initialise Variables
+        run: echo "Initialising environment variables"
+
+  post_configuration:
+    needs: [initialise_vars]
+    runs-on: windows-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.3.0
+
+      - name: Login to Azure
+        uses: azure/login@v1.4.6
+        with:
+          client-id: ${{ needs.initialise_vars.outputs.oidc_app_reg_client_id }}
+          tenant-id: ${{ needs.initialise_vars.outputs.azure_tenant_id }}
+          allow-no-subscriptions: true
+          enable-AzPSSession: true
+
+      - name: Creating a Service Principal Dev
+        if: inputs.environment == 'test'
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            # Install-Module Microsoft.Graph -Force -verbose
+            # Get-Module Microsoft.Graph
+            # Import-Module Microsoft.Graph -Force
+            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+            (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+            $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
+            Connect-MgGraph -AccessToken $sec
+            Import-Module Microsoft.Graph.Applications
+            $appName = "${{ env.spDevName }}"
+            $myApp = Get-MgApplication -Filter "DisplayName eq '$appName'" -ErrorAction SilentlyContinue        
+            if ($myApp) {
+                Write-Output "Application $appName already exists. Skipping creation..."
+            } else {
+                $myApp = New-MgApplication -DisplayName "$appName"
+                Write-Output "Application $appName created successfully."
+            }
+            $myApp 
+            start-sleep -Seconds 300
+            $subscriptionId = (Get-AzContext).Subscription.Id
+            $tenantId = (Get-AzContext).Subscription.TenantId
+            $githubOrganisation = "orgName"
+            $githubRepo = "${{ inputs.gitRepoName}}"
+            $gitBranch = "main"
+            $gitFederationName = "grp-azure-${{ env.solutionShortName }}-actions"
+            $clientId = $myApp.id
+            $policy = "repo:$githubOrganisation/$($githubRepo):ref:refs/heads/$gitBranch"
+            $creds = get-MgApplicationFederatedIdentityCredential -ApplicationId $myApp.id | where-object {$_.Subject -eq $policy}
+            if($creds){
+              Write-Output "Policy details $policy already exists. Skipping creation..."
+            } else {
+              $federatedApp = New-MgApplicationFederatedIdentityCredential -ApplicationId $clientId `
+              -Audiences api://AzureADTokenExchange -Issuer "https://token.actions.githubusercontent.com" -Name $gitFederationName -Subject $policy
+            }
+            echo "devObjectId=$myApp.ObjectId" >> $env:GITHUB_ENV
+
+          azPSVersion: latest
+
+      - name: Create a ResourceGroup Dev
+        if: inputs.environment == 'test'
+        run: |
+          az account set --subscription  ${{ env.test_subscription_id }}
+          az deployment sub create `
+          --name 'deploy_project_resourcegroup' `
+          --location '${{ inputs.location }}' `
+          --subscription ${{ env.test_subscription_id }} `
+          --parameters-file: ./deployment/parameters.bicepparam
+
+        shell: pwsh
