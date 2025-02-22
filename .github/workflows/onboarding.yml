@@ -82,7 +82,7 @@ jobs:
           enable-AzPSSession: true
 
       - name: Creating a Service Principal Dev
-        if: inputs.environment == 'test'
+        if: inputs.environment == 'tst'
         uses: azure/powershell@v1
         with:
           inlineScript: |
@@ -124,7 +124,7 @@ jobs:
           azPSVersion: latest
 
       - name: Create a ResourceGroup Dev
-        if: inputs.environment == 'test'
+        if: inputs.environment == 'tst'
         run: |
           az account set --subscription  ${{ env.test_subscription_id }}
           az deployment sub create `
