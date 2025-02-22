@@ -106,7 +106,7 @@ jobs:
             start-sleep -Seconds 300
             $subscriptionId = (Get-AzContext).Subscription.Id
             $tenantId = (Get-AzContext).Subscription.TenantId
-            $githubOrganisation = "orgName"
+            $githubOrganisation = "tulpy"
             $githubRepo = "${{ inputs.gitRepoName}}"
             $gitBranch = "main"
             $gitFederationName = "grp-azure-${{ env.solutionShortName }}-actions"
