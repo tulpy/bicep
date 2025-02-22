@@ -1,7 +1,7 @@
 using 'br/public:avm/res/resources/resource-group:0.4.1'
 
 // Required parameters
-param name = 'avm-resources.resourcegroups-rrgwaf-rg'
+param name = 'test'
 // Non-required parameters
 param tags = {
   Environment: 'Non-Prod'
