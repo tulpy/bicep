@@ -132,5 +132,7 @@ jobs:
           --location '${{ inputs.location }}' `
           --subscription ${{ env.test_subscription_id }} `
           --parameters-file: ./deployment/parameters.bicepparam
+          --parameters `
+            principalId="${{ env.devObjectId }}"
 
         shell: pwsh
