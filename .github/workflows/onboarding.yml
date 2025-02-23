@@ -34,7 +34,6 @@ on:
         default: ""
 
 env:
-  service_tier: global
   environment: ${{ inputs.environment }} # path to directory containing bicep template
   location: ${{ inputs.location }} # location for resource deployment in azure
   test_subscription_id: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9" # azure subscription id (not required for tenant level deployments)
@@ -48,9 +47,9 @@ env:
 
 jobs:
   initialise_vars:
+    name: Initialise Variables
     runs-on: windows-latest
     outputs:
-      service_tier: ${{ env.service_tier }}
       test_subscription_id: ${{ env.test_subscription_id }}
       prod_subscription_id: ${{ env.prod_subscription_id }}
       location: ${{ env.location }}
@@ -63,6 +62,7 @@ jobs:
         run: echo "Initialising environment variables"
 
   post_configuration:
+    name: Post Configuration
     needs: [initialise_vars]
     runs-on: windows-latest
     environment: ${{ inputs.environment }}
@@ -71,10 +71,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v3.3.0
+        uses: actions/checkout@v4
 
       - name: Login to Azure
-        uses: azure/login@v1.4.6
+        uses: azure/login@v2.2.0
         with:
           client-id: ${{ needs.initialise_vars.outputs.oidc_app_reg_client_id }}
           tenant-id: ${{ needs.initialise_vars.outputs.azure_tenant_id }}
@@ -83,7 +83,7 @@ jobs:
 
       - name: Creating a Service Principal Dev
         if: inputs.environment == 'tst'
-        uses: azure/powershell@v1
+        uses: azure/powershell@v2
         with:
           inlineScript: |
             # Install-Module Microsoft.Graph -Force -verbose
@@ -92,7 +92,7 @@ jobs:
             $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
             (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
             $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
-            Connect-MgGraph -AccessToken $sec
+            Connect-MgGraph -AccessToken $sec -NoWelcome
             Import-Module Microsoft.Graph.Applications
             $appName = "${{ env.spDevName }}"
             $myApp = Get-MgApplication -Filter "DisplayName eq '$appName'" -ErrorAction SilentlyContinue        
@@ -131,6 +131,6 @@ jobs:
           --name 'deploy_project_resourcegroup' `
           --location '${{ inputs.location }}' `
           --subscription ${{ env.test_subscription_id }} `
-          --parameters-file: ./deployment/parameters.bicepparam
+          --parameters-file ./deployment/parameters.bicepparam
 
         shell: pwsh
