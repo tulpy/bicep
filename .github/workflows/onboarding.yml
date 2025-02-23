@@ -89,18 +89,18 @@ jobs:
             # Install-Module Microsoft.Graph -Force -verbose
             # Get-Module Microsoft.Graph
             # Import-Module Microsoft.Graph -Force
-            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token -AsSecureString
-            #(Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+            (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
             $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
             Connect-MgGraph -AccessToken $sec -NoWelcome
             Import-Module Microsoft.Graph.Applications
             $appName = "${{ env.spDevName }}"
             $myApp = Get-MgApplication -Filter "DisplayName eq '$appName'" -ErrorAction SilentlyContinue        
             if ($myApp) {
-                Write-Output "Application $appName already exists. Skipping creation..."
+                Write-Output "Application Registration $appName already exists. Skipping creation..."
             } else {
                 $myApp = New-MgApplication -DisplayName "$appName"
-                Write-Output "Application $appName created successfully."
+                Write-Output "Application Registration $appName created successfully."
             }
             $myApp 
             start-sleep -Seconds 300
