@@ -14,7 +14,7 @@ on:
           - "prd"
 
       location:
-        description: "Please select the location to deploy the resources"
+        description: "Please select the Azure region."
         type: choice
         required: True
         options:
@@ -27,8 +27,8 @@ on:
         required: True
         default: ""
 
-      gitRepoName:
-        description: "Git Repository Name"
+      gitHubRepoName:
+        description: "Git Hub Repository Name"
         type: string
         required: True
         default: ""
@@ -59,7 +59,7 @@ jobs:
       solutionShortName: ${{ env.solutionShortName }}
     steps:
       - name: Initialise Variables
-        run: echo "Initialising environment variables"
+        run: echo "Initialising Environment Variables"
 
   post_configuration:
     name: Post Configuration
@@ -89,7 +89,7 @@ jobs:
             # Install-Module Microsoft.Graph -Force -verbose
             # Get-Module Microsoft.Graph
             # Import-Module Microsoft.Graph -Force
-            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
             (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
             $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
             Connect-MgGraph -AccessToken $sec -NoWelcome
