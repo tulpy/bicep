@@ -68,7 +68,7 @@ jobs:
           enable-AzPSSession: true
 
       - name: Create Application Registration and Federated Identity - DEV
-        if: inputs.environmentIdentifier == 'dev'
+        if: inputs.environmentIdentifier == 'tst'
         uses: azure/powershell@v2
         with:
           inlineScript: |
@@ -110,7 +110,7 @@ jobs:
           azPSVersion: latest
 
       - name: Create the Resource Group - DEV
-        if: inputs.environmentIdentifier == 'dev'
+        if: inputs.environmentIdentifier == 'tst'
         run: |
           az account set --subscription  ${{ env.devSubscriptionId }}
           az deployment sub create `
