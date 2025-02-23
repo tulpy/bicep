@@ -89,8 +89,8 @@ jobs:
             # Install-Module Microsoft.Graph -Force -verbose
             # Get-Module Microsoft.Graph
             # Import-Module Microsoft.Graph -Force
-            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
-            (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token -AsSecureString
+            #(Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
             $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
             Connect-MgGraph -AccessToken $sec -NoWelcome
             Import-Module Microsoft.Graph.Applications
@@ -131,6 +131,6 @@ jobs:
           --name 'deploy_project_resourcegroup' `
           --location '${{ inputs.location }}' `
           --subscription ${{ env.test_subscription_id }} `
-          --parameters-file ./deployment/parameters.bicepparam
+          --parameters ./deployment/parameters.bicepparam
 
         shell: pwsh
