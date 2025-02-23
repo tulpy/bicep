@@ -75,8 +75,8 @@ jobs:
             # Install-Module Microsoft.Graph -Force -verbose
             # Get-Module Microsoft.Graph
             # Import-Module Microsoft.Graph -Force
-            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
-            (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
+            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+            (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
             $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
             Connect-MgGraph -AccessToken $sec -NoWelcome
             Import-Module Microsoft.Graph.Applications
@@ -92,7 +92,7 @@ jobs:
             start-sleep -Seconds 300
             $subscriptionId = (Get-AzContext).Subscription.Id
             $tenantId = (Get-AzContext).Subscription.TenantId
-            $githubOrganisation = "tulpy"
+            $githubOrganisation = "${{ env.gitHubOrganisation}}"
             $githubRepo = "${{ inputs.gitHubRepoName}}"
             $gitBranch = "main"
             $gitFederationName = "federated-credentials-${{ inputs.workloadShortName }}"
