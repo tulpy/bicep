@@ -28,7 +28,7 @@ on:
         default: ""
 
       gitHubRepoName:
-        description: "Git Hub Repository Name"
+        description: "GitHub Repository Name"
         type: string
         required: True
         default: ""
@@ -76,7 +76,7 @@ jobs:
             # Get-Module Microsoft.Graph
             # Import-Module Microsoft.Graph -Force
             $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
-            (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+            (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
             $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
             Connect-MgGraph -AccessToken $sec -NoWelcome
             Import-Module Microsoft.Graph.Applications
