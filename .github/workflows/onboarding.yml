@@ -3,8 +3,8 @@ name: Resource Group Deployment Onboarding
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Please select the environment to deploy the resources"
+      environmentIdentifier:
+        description: "Please select the environment identifier"
         type: choice
         required: True
         options:
@@ -34,38 +34,24 @@ on:
         default: ""
 
 env:
-  environment: ${{ inputs.environment }} # path to directory containing bicep template
-  location: ${{ inputs.location }} # location for resource deployment in azure
-  test_subscription_id: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9" # azure subscription id (not required for tenant level deployments)
-  prod_subscription_id: "" # azure subscription id (not required for tenant level deployments)
-  oidc_app_reg_client_id: "a7164fc2-e53c-48a0-8ef8-13c558a9ea95" # client id of the azure application registration used to authenticate to azure using oidc, refer to https://learn.microsoft.com/en-us/azure/active-directory/develop/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#github-actions
-  azure_tenant_id: "a2ebc691-c318-4ec2-998a-a87c528378e0" # azure ad tenant/directory id
-  solutionShortName: ${{ inputs.workloadShortName }}
-  workloadTier: "global"
-  spDevName: "dc-github-azure-${{ inputs.workloadShortName }}-dev"
-  spProdName: "dc-github-azure-${{ inputs.workloadShortName }}-prod"
+  deploymentJobId: "deploy-rg-${{ github.run_id }}"
+  gitHubOrganisation: "tulpy"
+  oidcAppRegClientId: "a7164fc2-e53c-48a0-8ef8-13c558a9ea95"
+  tenantId: "a2ebc691-c318-4ec2-998a-a87c528378e0"
+  sbxSubscriptionId: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9"
+  devSubscriptionId: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9"
+  tstSubscriptionId: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9"
+  prdSubscriptionId: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9"
+  spnSbxName: "app-reg-github-${{ inputs.workloadShortName }}-sbx"
+  spnDevName: "app-reg-github-${{ inputs.workloadShortName }}-dev"
+  spnTstName: "app-reg-github-${{ inputs.workloadShortName }}-tst"
+  spnPrdName: "app-reg-github-${{ inputs.workloadShortName }}-prd"
 
 jobs:
-  initialise_vars:
-    name: Initialise Variables
+  deploy:
+    name: Deploy
     runs-on: windows-latest
-    outputs:
-      test_subscription_id: ${{ env.test_subscription_id }}
-      prod_subscription_id: ${{ env.prod_subscription_id }}
-      location: ${{ env.location }}
-      oidc_app_reg_client_id: ${{ env.oidc_app_reg_client_id }}
-      azure_tenant_id: ${{ env.azure_tenant_id }}
-      workloadTier: ${{ env.workloadTier }}
-      solutionShortName: ${{ env.solutionShortName }}
-    steps:
-      - name: Initialise Variables
-        run: echo "Initialising Environment Variables"
-
-  post_configuration:
-    name: Post Configuration
-    needs: [initialise_vars]
-    runs-on: windows-latest
-    environment: ${{ inputs.environment }}
+    environment: '${{ inputs.environmentIdentifier }}'
     permissions:
       id-token: write
       contents: read
@@ -76,13 +62,13 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2.2.0
         with:
-          client-id: ${{ needs.initialise_vars.outputs.oidc_app_reg_client_id }}
-          tenant-id: ${{ needs.initialise_vars.outputs.azure_tenant_id }}
+          client-id: ${{ env.oidcAppRegClientId }}
+          tenant-id: ${{ env.tenantId }}
           allow-no-subscriptions: true
           enable-AzPSSession: true
 
-      - name: Creating a Service Principal Dev
-        if: inputs.environment == 'tst'
+      - name: Create Application Registration and Federated Identity - DEV
+        if: inputs.environmentIdentifier == 'dev'
         uses: azure/powershell@v2
         with:
           inlineScript: |
@@ -94,27 +80,27 @@ jobs:
             $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
             Connect-MgGraph -AccessToken $sec -NoWelcome
             Import-Module Microsoft.Graph.Applications
-            $appName = "${{ env.spDevName }}"
+            $appName = "${{ env.spnDevName }}"
             $myApp = Get-MgApplication -Filter "DisplayName eq '$appName'" -ErrorAction SilentlyContinue        
             if ($myApp) {
-                Write-Output "Application Registration $appName already exists. Skipping creation..."
+                Write-Host "Application Registration $appName already exists. Skipping creation..."
             } else {
                 $myApp = New-MgApplication -DisplayName "$appName"
-                Write-Output "Application Registration $appName created successfully."
+                Write-Host "Application Registration $appName created successfully."
             }
             $myApp 
             start-sleep -Seconds 300
             $subscriptionId = (Get-AzContext).Subscription.Id
             $tenantId = (Get-AzContext).Subscription.TenantId
             $githubOrganisation = "tulpy"
-            $githubRepo = "${{ inputs.gitRepoName}}"
+            $githubRepo = "${{ inputs.gitHubRepoName}}"
             $gitBranch = "main"
-            $gitFederationName = "grp-azure-${{ env.solutionShortName }}-actions"
+            $gitFederationName = "federated-credentials-${{ inputs.workloadShortName }}"
             $clientId = $myApp.id
             $policy = "repo:$githubOrganisation/$($githubRepo):ref:refs/heads/$gitBranch"
             $creds = get-MgApplicationFederatedIdentityCredential -ApplicationId $myApp.id | where-object {$_.Subject -eq $policy}
             if($creds){
-              Write-Output "Policy details $policy already exists. Skipping creation..."
+              Write-Host "Workload identity federation $policy already exists. Skipping creation..."
             } else {
               $federatedApp = New-MgApplicationFederatedIdentityCredential -ApplicationId $clientId `
               -Audiences api://AzureADTokenExchange -Issuer "https://token.actions.githubusercontent.com" -Name $gitFederationName -Subject $policy
@@ -123,14 +109,13 @@ jobs:
 
           azPSVersion: latest
 
-      - name: Create a ResourceGroup Dev
-        if: inputs.environment == 'tst'
+      - name: Create the Resource Group - DEV
+        if: inputs.environmentIdentifier == 'dev'
         run: |
-          az account set --subscription  ${{ env.test_subscription_id }}
+          az account set --subscription  ${{ env.devSubscriptionId }}
           az deployment sub create `
-          --name 'deploy_project_resourcegroup' `
-          --location '${{ inputs.location }}' `
-          --subscription ${{ env.test_subscription_id }} `
+          --name ${{ env.deploymentJobId }} `
+          --location ${{ inputs.location }} `
+          --subscription ${{ env.devSubscriptionId }} `
           --parameters ./deployment/parameters.bicepparam
-
         shell: pwsh
