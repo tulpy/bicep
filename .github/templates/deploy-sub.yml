@@ -4,17 +4,13 @@ name: Deploy
 on:
   workflow_call:
     inputs:
-      artefactName:
+      subscriptionId:
         required: true
         type: string
-        default: artefact
-      environment:
+      environmentIdentifier:
         required: true
         type: string
       location:
-        required: true
-        type: string
-      moduleName:
         required: true
         type: string
 
@@ -31,12 +27,12 @@ permissions:
   id-token: write # This is required for azure/login
 
 env:
-  deploymentJobId: ${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }} # Unique ID for the deployment job
+  deploymentJobId: "deploy-rg-${{ github.run_id }}"
 
 jobs:
   deploy:
-    name: ${{ inputs.moduleName }}
-    environment: ${{ inputs.environmentName }}
+    name: deploy
+    environment: ${{ inputs.environmentIdentifier }}
     runs-on: windows-latest
     continue-on-error: false
     steps:
@@ -68,9 +64,8 @@ jobs:
           name: main-${{env.deploymentJobId}}
           location: ${{inputs.location}}
           scope: subscription
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          subscription-id: ${{ inputs.subscriptionId }}
           parameters-file: ./deployment/parameters.bicepparam
-          parameters: '{"name": "Development", "tags": { "environment": "development" }}'
 
       - name: Deploy
         uses: azure/bicep-deploy@v2

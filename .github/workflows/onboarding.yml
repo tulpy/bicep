@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environmentIdentifier:
-        description: "Please select the environment identifier"
+        description: "Please select the environment for deployment"
         type: choice
         required: True
         options:
@@ -48,10 +48,27 @@ env:
   spnPrdName: "app-reg-github-${{ inputs.workloadShortName }}-prd"
 
 jobs:
+  initialise_vars:
+    runs-on: windows-latest
+    outputs:
+      sbxSubscriptionId: ${{ env.sbxSubscriptionId }}
+      devSubscriptionId: ${{ env.devSubscriptionId }}
+      tstSubscriptionId: ${{ env.tstSubscriptionId }}
+      prdSubscriptionId: ${{ env.prdSubscriptionId }}
+      location: ${{ inputs.location }}
+      oidcAppRegClientId: ${{ env.oidcAppRegClientId }}
+      tenantId: ${{ env.tenantId }}
+      environmentIdentifier: ${{ inputs.environmentIdentifier }}
+      solutionShortName: ${{ inputs.workloadShortName }}
+    steps:
+      - name: Initialise Variables
+        run: echo "Initialising environment variables"
+
   deploy:
     name: Deploy
+    needs: [initialise_vars]
     runs-on: windows-latest
-    environment: '${{ inputs.environmentIdentifier }}'
+    environment: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
     permissions:
       id-token: write
       contents: read
@@ -62,8 +79,8 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2.2.0
         with:
-          client-id: ${{ env.oidcAppRegClientId }}
-          tenant-id: ${{ env.tenantId }}
+          client-id: ${{ needs.initialise_vars.outputs.oidcAppRegClientId }}
+          tenant-id: ${{ needs.initialise_vars.outputs.tenantId }}
           allow-no-subscriptions: true
           enable-AzPSSession: true
 
@@ -109,13 +126,16 @@ jobs:
 
           azPSVersion: latest
 
-      - name: Create the Resource Group - DEV
-        if: inputs.environmentIdentifier == 'tst'
-        run: |
-          az account set --subscription  ${{ env.devSubscriptionId }}
-          az deployment sub create `
-          --name ${{ env.deploymentJobId }} `
-          --location ${{ inputs.location }} `
-          --subscription ${{ env.devSubscriptionId }} `
-          --parameters ./deployment/parameters.bicepparam
-        shell: pwsh
+ # If you need additional  environments, make a copy of the code block below and update at least the environmentName for each environment.
+  deploy_Dev:
+    name: Dev
+    needs: [initialise_vars]
+    if: inputs.environmentIdentifier == 'dev'
+    uses: ./.github/templates/deploy-sub.yml
+    concurrency: "deploy"
+    #needs:
+    with:
+      subscriptionId: ${{ needs.initialise_vars.outputs.devSubscriptionId }}
+      environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
+      location: ${{ needs.initialise_vars.outputs.location }}
+    secrets: inherit
