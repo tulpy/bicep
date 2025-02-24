@@ -31,7 +31,7 @@ jobs:
   deploy:
     name: deploy
     environment: ${{ inputs.environmentIdentifier }}
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     continue-on-error: false
     steps:
       - name: Checkout
