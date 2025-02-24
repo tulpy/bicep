@@ -60,6 +60,12 @@ jobs:
       tenantId: ${{ env.tenantId }}
       environmentIdentifier: ${{ inputs.environmentIdentifier }}
       solutionShortName: ${{ inputs.workloadShortName }}
+      spnSbxName: ${{ env.spnSbxName }}
+      spnDevName: ${{ env.spnDevName }}
+      spnTstName: ${{ env.spnTstName }}
+      spnPrdName: ${{ env.spnPrdName }}
+      gitHubOrganisation: ${{ env.gitHubOrganisation }}
+
     steps:
       - name: Initialise Variables
         run: echo "Initialising environment variables"
@@ -126,8 +132,23 @@ jobs:
 
           azPSVersion: latest
 
+  deploy_Sbx:
+    name: Sandbox
+    needs: [initialise_vars, deploy]
+    if: inputs.environmentIdentifier == 'sbx'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-sub.yml
+    with:
+      applicationRegistration: ${{ needs.initialise_vars.outputs.spnSbxName }}
+      subscriptionId: ${{ needs.initialise_vars.outputs.sbxSubscriptionId }}
+      environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
+      location: ${{ needs.initialise_vars.outputs.location }}
+    secrets: inherit
+
   deploy_Dev:
-    name: Dev
+    name: Development
     needs: [initialise_vars, deploy]
     if: inputs.environmentIdentifier == 'dev'
     permissions:
@@ -135,7 +156,38 @@ jobs:
       contents: read
     uses: ./.github/workflows/deploy-sub.yml
     with:
+      applicationRegistration: ${{ needs.initialise_vars.outputs.spnDevName }}
       subscriptionId: ${{ needs.initialise_vars.outputs.devSubscriptionId }}
       environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
       location: ${{ needs.initialise_vars.outputs.location }}
     secrets: inherit
+
+  deploy_Tst:
+      name: Test
+      needs: [initialise_vars, deploy]
+      if: inputs.environmentIdentifier == 'tst'
+      permissions:
+        id-token: write
+        contents: read
+      uses: ./.github/workflows/deploy-sub.yml
+      with:
+        applicationRegistration: ${{ needs.initialise_vars.outputs.spnTstName }}
+        subscriptionId: ${{ needs.initialise_vars.outputs.tstSubscriptionId }}
+        environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
+        location: ${{ needs.initialise_vars.outputs.location }}
+      secrets: inherit
+
+  deploy_Prd:
+        name: Production
+        needs: [initialise_vars, deploy]
+        if: inputs.environmentIdentifier == 'prd'
+        permissions:
+          id-token: write
+          contents: read
+        uses: ./.github/workflows/deploy-sub.yml
+        with:
+          applicationRegistration: ${{ needs.initialise_vars.outputs.spnPrdName }}
+          subscriptionId: ${{ needs.initialise_vars.outputs.prdSubscriptionId }}
+          environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
+          location: ${{ needs.initialise_vars.outputs.location }}
+        secrets: inherit
