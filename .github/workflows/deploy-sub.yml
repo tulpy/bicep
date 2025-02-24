@@ -75,9 +75,8 @@ jobs:
           name: main-${{env.deploymentJobId}}
           location: ${{inputs.location}}
           scope: subscription
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          template-file: ./src/orchestration/main.bicep
-          parameters-file: ./src/configuration/main.${{inputs.environmentName}}.bicepparam
+          subscription-id: ${{ inputs.subscriptionId }}
+          parameters-file: ./deployment/parameters.bicepparam
 
       # Log out of Azure
       - name: Az Logout

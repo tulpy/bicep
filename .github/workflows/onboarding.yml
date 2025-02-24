@@ -130,6 +130,9 @@ jobs:
     name: Dev
     needs: [initialise_vars]
     if: inputs.environmentIdentifier == 'dev'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/deploy-sub.yml
     with:
       subscriptionId: ${{ needs.initialise_vars.outputs.devSubscriptionId }}
