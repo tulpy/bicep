@@ -49,6 +49,7 @@ env:
 
 jobs:
   initialise_vars:
+    name: Initialise Variables
     runs-on: windows-latest
     outputs:
       sbxSubscriptionId: ${{ env.sbxSubscriptionId }}

@@ -96,17 +96,10 @@ jobs:
 
           azPSVersion: latest
 
-      - name: Set PAL
-        uses: Azure/cli@v2
-        with:
-          inlineScript: |
-            az extension add --name managementpartner
-            az managementpartner update --partner-id 1158331 || az managementpartner create --partner-id 1158331
-
       - name: whatIf
         uses: azure/bicep-deploy@v2
         with:
-          operation: WhatIf
+          operation: whatIf
           type: deployment
           name: main-${{env.deploymentJobId}}
           location: ${{inputs.location}}
