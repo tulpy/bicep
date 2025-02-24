@@ -19,8 +19,6 @@ on:
         required: true
       AZURE_TENANT_ID:
         required: true
-      AZURE_SUBSCRIPTION_ID:
-        required: true
 
 permissions:
   contents: read # Required to read the repository's contents

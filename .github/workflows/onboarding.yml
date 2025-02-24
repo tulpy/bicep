@@ -128,7 +128,7 @@ jobs:
 
   deploy_Dev:
     name: Dev
-    needs: [initialise_vars]
+    needs: [initialise_vars, deploy]
     if: inputs.environmentIdentifier == 'dev'
     permissions:
       id-token: write
