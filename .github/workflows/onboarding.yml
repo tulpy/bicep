@@ -64,83 +64,24 @@ jobs:
       spnDevName: ${{ env.spnDevName }}
       spnTstName: ${{ env.spnTstName }}
       spnPrdName: ${{ env.spnPrdName }}
+      gitHubRepoName: ${{ inputs.gitHubRepoName }}
       gitHubOrganisation: ${{ env.gitHubOrganisation }}
 
     steps:
       - name: Initialise Variables
         run: echo "Initialising environment variables"
 
-  deploy:
-    name: Deploy
-    needs: [initialise_vars]
-    runs-on: ubuntu-latest
-    environment: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Login to Azure
-        uses: azure/login@v2.2.0
-        with:
-          client-id: ${{ needs.initialise_vars.outputs.oidcAppRegClientId }}
-          tenant-id: ${{ needs.initialise_vars.outputs.tenantId }}
-          allow-no-subscriptions: true
-          enable-AzPSSession: true
-
-      - name: Create Application Registration and Federated Identity - DEV
-        if: inputs.environmentIdentifier == 'tst'
-        uses: azure/powershell@v2
-        with:
-          inlineScript: |
-            # Install-Module Microsoft.Graph -Force -verbose
-            # Get-Module Microsoft.Graph
-            # Import-Module Microsoft.Graph -Force
-            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
-            (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
-            $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
-            Connect-MgGraph -AccessToken $sec -NoWelcome
-            Import-Module Microsoft.Graph.Applications
-            $appName = "${{ env.spnDevName }}"
-            $myApp = Get-MgApplication -Filter "DisplayName eq '$appName'" -ErrorAction SilentlyContinue        
-            if ($myApp) {
-                Write-Host "Application Registration $appName already exists. Skipping creation..."
-            } else {
-                $myApp = New-MgApplication -DisplayName "$appName"
-                Write-Host "Application Registration $appName created successfully."
-            }
-            $myApp 
-            start-sleep -Seconds 300
-            $subscriptionId = (Get-AzContext).Subscription.Id
-            $tenantId = (Get-AzContext).Subscription.TenantId
-            $githubOrganisation = "${{ env.gitHubOrganisation}}"
-            $githubRepo = "${{ inputs.gitHubRepoName}}"
-            $gitBranch = "main"
-            $gitFederationName = "federated-credentials-${{ inputs.workloadShortName }}"
-            $clientId = $myApp.id
-            $policy = "repo:$githubOrganisation/$($githubRepo):ref:refs/heads/$gitBranch"
-            $creds = get-MgApplicationFederatedIdentityCredential -ApplicationId $myApp.id | where-object {$_.Subject -eq $policy}
-            if($creds){
-              Write-Host "Workload identity federation $policy already exists. Skipping creation..."
-            } else {
-              $federatedApp = New-MgApplicationFederatedIdentityCredential -ApplicationId $clientId `
-              -Audiences api://AzureADTokenExchange -Issuer "https://token.actions.githubusercontent.com" -Name $gitFederationName -Subject $policy
-            }
-            echo "devObjectId=$myApp.ObjectId" >> $env:GITHUB_ENV
-
-          azPSVersion: latest
-
   deploy_Sbx:
     name: Sandbox
-    needs: [initialise_vars, deploy]
+    needs: [initialise_vars]
     if: inputs.environmentIdentifier == 'sbx'
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-sub.yml
     with:
+      gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
+      gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
       applicationRegistration: ${{ needs.initialise_vars.outputs.spnSbxName }}
       subscriptionId: ${{ needs.initialise_vars.outputs.sbxSubscriptionId }}
       environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
@@ -149,13 +90,15 @@ jobs:
 
   deploy_Dev:
     name: Development
-    needs: [initialise_vars, deploy]
+    needs: [initialise_vars]
     if: inputs.environmentIdentifier == 'dev'
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-sub.yml
     with:
+      gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
+      gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
       applicationRegistration: ${{ needs.initialise_vars.outputs.spnDevName }}
       subscriptionId: ${{ needs.initialise_vars.outputs.devSubscriptionId }}
       environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
@@ -164,13 +107,15 @@ jobs:
 
   deploy_Tst:
       name: Test
-      needs: [initialise_vars, deploy]
+      needs: [initialise_vars]
       if: inputs.environmentIdentifier == 'tst'
       permissions:
         id-token: write
         contents: read
       uses: ./.github/workflows/deploy-sub.yml
       with:
+        gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
+        gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
         applicationRegistration: ${{ needs.initialise_vars.outputs.spnTstName }}
         subscriptionId: ${{ needs.initialise_vars.outputs.tstSubscriptionId }}
         environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
@@ -179,13 +124,15 @@ jobs:
 
   deploy_Prd:
         name: Production
-        needs: [initialise_vars, deploy]
+        needs: [initialise_vars]
         if: inputs.environmentIdentifier == 'prd'
         permissions:
           id-token: write
           contents: read
         uses: ./.github/workflows/deploy-sub.yml
         with:
+          gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
+          gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
           applicationRegistration: ${{ needs.initialise_vars.outputs.spnPrdName }}
           subscriptionId: ${{ needs.initialise_vars.outputs.prdSubscriptionId }}
           environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}

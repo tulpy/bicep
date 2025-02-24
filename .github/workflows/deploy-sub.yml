@@ -16,6 +16,12 @@ on:
       applicationRegistration:
         required: true
         type: string
+      gitHubRepoName:
+        required: true
+        type: string
+      gitHubOrganisation:
+        required: true
+        type: string
 
     secrets:
       AZURE_CLIENT_ID:
@@ -49,8 +55,7 @@ jobs:
           allow-no-subscriptions: true
           enable-AzPSSession: true
 
-      - name: Create Application Registration and Federated Identity - DEV
-        if: inputs.environmentIdentifier == 'tst'
+      - name: Create Application Registration and Federated Identity - ${{ inputs.environmentIdentifier }}
         uses: azure/powershell@v2
         with:
           inlineScript: |
@@ -101,7 +106,7 @@ jobs:
       - name: whatIf
         uses: azure/bicep-deploy@v2
         with:
-          operation: What-If
+          operation: WhatIf
           type: deployment
           name: main-${{env.deploymentJobId}}
           location: ${{inputs.location}}
