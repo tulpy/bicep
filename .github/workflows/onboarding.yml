@@ -126,14 +126,11 @@ jobs:
 
           azPSVersion: latest
 
- # If you need additional  environments, make a copy of the code block below and update at least the environmentName for each environment.
   deploy_Dev:
     name: Dev
     needs: [initialise_vars]
     if: inputs.environmentIdentifier == 'dev'
-    uses: ./.github/templates/deploy-sub.yml
-    concurrency: "deploy"
-    #needs:
+    uses: ./.github/workflows/deploy-sub.yml
     with:
       subscriptionId: ${{ needs.initialise_vars.outputs.devSubscriptionId }}
       environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
