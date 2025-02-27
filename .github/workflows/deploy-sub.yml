@@ -13,13 +13,16 @@ on:
       location:
         required: true
         type: string
-      applicationRegistration:
+      applicationRegistrationName:
         required: true
         type: string
       gitHubRepoName:
         required: true
         type: string
       gitHubOrganisation:
+        required: true
+        type: string
+      workloadShortName:
         required: true
         type: string
 
@@ -59,42 +62,9 @@ jobs:
         uses: azure/powershell@v2
         with:
           inlineScript: |
-            # Install-Module Microsoft.Graph -Force -verbose
-            # Get-Module Microsoft.Graph
-            # Import-Module Microsoft.Graph -Force
-            $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
-            (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
-            $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
-            Connect-MgGraph -AccessToken $sec -NoWelcome
-            Import-Module Microsoft.Graph.Applications
-            $appName = "${{ inputs.applicationRegistration }}"
-            $myApp = Get-MgApplication -Filter "DisplayName eq '$appName'" -ErrorAction SilentlyContinue        
-            if ($myApp) {
-                Write-Host "Application Registration $appName already exists. Skipping creation..."
-            } else {
-                $myApp = New-MgApplication -DisplayName "$appName"
-                Write-Host "Application Registration $appName created successfully."
-            }
-            $myApp 
-            start-sleep -Seconds 300
-            $subscriptionId = (Get-AzContext).Subscription.Id
-            $tenantId = (Get-AzContext).Subscription.TenantId
-            $githubOrganisation = "${{ env.gitHubOrganisation}}"
-            $githubRepo = "${{ inputs.gitHubRepoName}}"
-            $gitBranch = "main"
-            $gitFederationName = "federated-credentials-${{ inputs.workloadShortName }}"
-            $clientId = $myApp.id
-            $policy = "repo:$githubOrganisation/$($githubRepo):ref:refs/heads/$gitBranch"
-            $creds = get-MgApplicationFederatedIdentityCredential -ApplicationId $myApp.id | where-object {$_.Subject -eq $policy}
-            if($creds){
-              Write-Host "Workload identity federation $policy already exists. Skipping creation..."
-            } else {
-              $federatedApp = New-MgApplicationFederatedIdentityCredential -ApplicationId $clientId `
-              -Audiences api://AzureADTokenExchange -Issuer "https://token.actions.githubusercontent.com" -Name $gitFederationName -Subject $policy
-            }
-            echo "devObjectId=$myApp.ObjectId" >> $env:GITHUB_ENV
-
-          azPSVersion: latest
+            Write-Information "==> Running script..." -InformationAction Continue
+            ./.github/scripts/Create-AppRegistrationOIDC.ps1 -workloadShortName ${{inputs.workloadShortName}} -applicationRegistrationName ${{inputs.applicationRegistrationName}} -gitHubOrganisation ${{inputs.gitHubOrganisation}} -gitHubRepoName ${{inputs.gitHubRepoName}}
+          azPSVersion: 'latest'
 
       - name: whatIf
         uses: azure/bicep-deploy@v2

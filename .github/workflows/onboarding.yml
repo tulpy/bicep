@@ -60,7 +60,7 @@ jobs:
       oidcAppRegClientId: ${{ env.oidcAppRegClientId }}
       tenantId: ${{ env.tenantId }}
       environmentIdentifier: ${{ inputs.environmentIdentifier }}
-      solutionShortName: ${{ inputs.workloadShortName }}
+      workloadShortName: ${{ inputs.workloadShortName }}
       spnSbxName: ${{ env.spnSbxName }}
       spnDevName: ${{ env.spnDevName }}
       spnTstName: ${{ env.spnTstName }}
@@ -83,10 +83,11 @@ jobs:
     with:
       gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
       gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
-      applicationRegistration: ${{ needs.initialise_vars.outputs.spnSbxName }}
+      applicationRegistrationName: ${{ needs.initialise_vars.outputs.spnSbxName }}
       subscriptionId: ${{ needs.initialise_vars.outputs.sbxSubscriptionId }}
       environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
       location: ${{ needs.initialise_vars.outputs.location }}
+      workloadShortName: ${{ needs.initialise_vars.outputs.workloadShortName }}
     secrets: inherit
 
   deploy_Dev:
@@ -100,10 +101,11 @@ jobs:
     with:
       gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
       gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
-      applicationRegistration: ${{ needs.initialise_vars.outputs.spnDevName }}
+      applicationRegistrationName: ${{ needs.initialise_vars.outputs.spnDevName }}
       subscriptionId: ${{ needs.initialise_vars.outputs.devSubscriptionId }}
       environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
       location: ${{ needs.initialise_vars.outputs.location }}
+      workloadShortName: ${{ needs.initialise_vars.outputs.workloadShortName }}
     secrets: inherit
 
   deploy_Tst:
@@ -117,10 +119,11 @@ jobs:
       with:
         gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
         gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
-        applicationRegistration: ${{ needs.initialise_vars.outputs.spnTstName }}
+        applicationRegistrationName: ${{ needs.initialise_vars.outputs.spnTstName }}
         subscriptionId: ${{ needs.initialise_vars.outputs.tstSubscriptionId }}
         environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
         location: ${{ needs.initialise_vars.outputs.location }}
+        workloadShortName: ${{ needs.initialise_vars.outputs.workloadShortName }}
       secrets: inherit
 
   deploy_Prd:
@@ -134,8 +137,9 @@ jobs:
         with:
           gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
           gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
-          applicationRegistration: ${{ needs.initialise_vars.outputs.spnPrdName }}
+          applicationRegistrationName: ${{ needs.initialise_vars.outputs.spnPrdName }}
           subscriptionId: ${{ needs.initialise_vars.outputs.prdSubscriptionId }}
           environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
           location: ${{ needs.initialise_vars.outputs.location }}
+          workloadShortName: ${{ needs.initialise_vars.outputs.workloadShortName }}
         secrets: inherit
