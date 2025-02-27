@@ -18,7 +18,7 @@ param(
 # Import-Module Microsoft.Graph -Force
 
 $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
-(Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+(Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
 $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
 
 Connect-MgGraph -AccessToken $sec -NoWelcome
@@ -31,7 +31,7 @@ if ($myApp) {
   $myApp = New-MgApplication -DisplayName "$applicationRegistrationName"
   Write-Output "Application Registration $applicationRegistrationName created successfully."
 }
-
+$myApp 
 Start-Sleep -Seconds 100
 $subscriptionId = (Get-AzContext).Subscription.Id
 $tenantId = (Get-AzContext).Subscription.TenantId
