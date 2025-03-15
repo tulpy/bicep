@@ -62,7 +62,7 @@ jobs:
         run: dotnet tool install -g azure-cost-cli
   
       - name: Run Azure Cost CLI
-        run: azure-cost accumulatedCost -o markdown --subscription ${{ github.event.inputs.az-subscription-id }} >> $GITHUB_STEP_SUMMARY
+        run: azure-cost accumulatedCost -o markdown --subscription '8d0248a2-d875-4407-99a6-0981fe09bff2' >> $GITHUB_STEP_SUMMARY
   
       - name: Create Application Registration and Federated Identity - ${{ inputs.environmentIdentifier }}
         uses: azure/powershell@v2
