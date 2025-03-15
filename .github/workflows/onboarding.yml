@@ -40,7 +40,7 @@ env:
   tenantId: "a2ebc691-c318-4ec2-998a-a87c528378e0"
   sbxSubscriptionId: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9"
   devSubscriptionId: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9"
-  tstSubscriptionId: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9"
+  tstSubscriptionId: "8d0248a2-d875-4407-99a6-0981fe09bff2"
   prdSubscriptionId: "0b5d0018-2879-4810-b8d7-4f8dda5ce0b9"
   spnSbxName: "app-reg-github-${{ inputs.workloadShortName }}-sbx"
   spnDevName: "app-reg-github-${{ inputs.workloadShortName }}-dev"
@@ -109,37 +109,37 @@ jobs:
     secrets: inherit
 
   deploy_Tst:
-      name: Test
-      needs: [initialise_vars]
-      if: inputs.environmentIdentifier == 'tst'
-      permissions:
-        id-token: write
-        contents: read
-      uses: ./.github/workflows/deploy-sub.yml
-      with:
-        gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
-        gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
-        applicationRegistrationName: ${{ needs.initialise_vars.outputs.spnTstName }}
-        subscriptionId: ${{ needs.initialise_vars.outputs.tstSubscriptionId }}
-        environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
-        location: ${{ needs.initialise_vars.outputs.location }}
-        workloadShortName: ${{ needs.initialise_vars.outputs.workloadShortName }}
-      secrets: inherit
+    name: Test
+    needs: [initialise_vars]
+    if: inputs.environmentIdentifier == 'tst'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-sub.yml
+    with:
+      gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
+      gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
+      applicationRegistrationName: ${{ needs.initialise_vars.outputs.spnTstName }}
+      subscriptionId: ${{ needs.initialise_vars.outputs.tstSubscriptionId }}
+      environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
+      location: ${{ needs.initialise_vars.outputs.location }}
+      workloadShortName: ${{ needs.initialise_vars.outputs.workloadShortName }}
+    secrets: inherit
 
   deploy_Prd:
-        name: Production
-        needs: [initialise_vars]
-        if: inputs.environmentIdentifier == 'prd'
-        permissions:
-          id-token: write
-          contents: read
-        uses: ./.github/workflows/deploy-sub.yml
-        with:
-          gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
-          gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
-          applicationRegistrationName: ${{ needs.initialise_vars.outputs.spnPrdName }}
-          subscriptionId: ${{ needs.initialise_vars.outputs.prdSubscriptionId }}
-          environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
-          location: ${{ needs.initialise_vars.outputs.location }}
-          workloadShortName: ${{ needs.initialise_vars.outputs.workloadShortName }}
-        secrets: inherit
+    name: Production
+    needs: [initialise_vars]
+    if: inputs.environmentIdentifier == 'prd'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-sub.yml
+    with:
+      gitHubRepoName: ${{ needs.initialise_vars.outputs.gitHubRepoName }}
+      gitHubOrganisation: ${{ needs.initialise_vars.outputs.gitHubOrganisation }}
+      applicationRegistrationName: ${{ needs.initialise_vars.outputs.spnPrdName }}
+      subscriptionId: ${{ needs.initialise_vars.outputs.prdSubscriptionId }}
+      environmentIdentifier: ${{ needs.initialise_vars.outputs.environmentIdentifier }}
+      location: ${{ needs.initialise_vars.outputs.location }}
+      workloadShortName: ${{ needs.initialise_vars.outputs.workloadShortName }}
+    secrets: inherit
