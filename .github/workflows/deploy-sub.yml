@@ -4,25 +4,17 @@ name: Deploy
 on:
   workflow_call:
     inputs:
-      subscriptionId:
+      artefactName:
         required: true
         type: string
-      environmentIdentifier:
+        default: artefact
+      environment:
         required: true
         type: string
       location:
         required: true
         type: string
-      applicationRegistrationName:
-        required: true
-        type: string
-      gitHubRepoName:
-        required: true
-        type: string
-      gitHubOrganisation:
-        required: true
-        type: string
-      workloadShortName:
+      moduleName:
         required: true
         type: string
 
@@ -31,19 +23,21 @@ on:
         required: true
       AZURE_TENANT_ID:
         required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
 
 permissions:
   contents: read # Required to read the repository's contents
   id-token: write # This is required for azure/login
 
 env:
-  deploymentJobId: "deploy-rg-${{ github.run_id }}"
+  deploymentJobId: ${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }} # Unique ID for the deployment job
 
 jobs:
   deploy:
-    name: deploy
-    environment: ${{ inputs.environmentIdentifier }}
-    runs-on: ubuntu-latest
+    name: ${{ inputs.moduleName }}
+    environment: ${{ inputs.environmentName }}
+    runs-on: windows-latest
     continue-on-error: false
     steps:
       - name: Checkout
@@ -58,21 +52,19 @@ jobs:
           allow-no-subscriptions: true
           enable-AzPSSession: true
 
-      - name: Install Azure Cost CLI
-        run: dotnet tool install -g azure-cost-cli
-  
-      - name: Run Azure Cost CLI
-        run: azure-cost accumulatedCost -o markdown --subscription ${{ inputs.subscriptionId }} >> $GITHUB_STEP_SUMMARY
-  
-      - name: Create Application Registration and Federated Identity - ${{ inputs.environmentIdentifier }}
-        uses: azure/powershell@v2
+      - name: Validate
+        uses: azure/bicep-deploy@v2
         with:
-          inlineScript: |
-            Write-Information "==> Running script..." -InformationAction Continue
-            ./.github/scripts/Create-AppRegistrationOIDC.ps1 -workloadShortName ${{inputs.workloadShortName}} -applicationRegistrationName ${{inputs.applicationRegistrationName}} -gitHubOrganisation ${{inputs.gitHubOrganisation}} -gitHubRepoName ${{inputs.gitHubRepoName}}
-          azPSVersion: 'latest'
+          operation: validate
+          type: deployment
+          name: main-${{env.deploymentJobId}}
+          location: ${{inputs.location}}
+          scope: subscription
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          template-file: ./src/orchestration/main.bicep
+          parameters-file: ./src/configuration/main.${{inputs.environment}}.bicepparam
 
-      - name: whatIf
+      - name: What-If
         uses: azure/bicep-deploy@v2
         with:
           operation: whatIf
@@ -80,8 +72,9 @@ jobs:
           name: main-${{env.deploymentJobId}}
           location: ${{inputs.location}}
           scope: subscription
-          subscription-id: ${{ inputs.subscriptionId }}
-          parameters-file: ./deployment/parameters.bicepparam
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          template-file: ./src/orchestration/main.bicep
+          parameters-file: ./src/configuration/main.${{inputs.environment}}.bicepparam
 
       - name: Deploy
         uses: azure/bicep-deploy@v2
@@ -91,8 +84,9 @@ jobs:
           name: main-${{env.deploymentJobId}}
           location: ${{inputs.location}}
           scope: subscription
-          subscription-id: ${{ inputs.subscriptionId }}
-          parameters-file: ./deployment/parameters.bicepparam
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          template-file: ./src/orchestration/main.bicep
+          parameters-file: ./src/configuration/main.${{inputs.environment}}.bicepparam
 
       # Log out of Azure
       - name: Az Logout

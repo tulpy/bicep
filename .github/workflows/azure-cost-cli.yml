@@ -1,9 +1,11 @@
+---
 name: Azure Cost CLI Workflow
 
 on:
   workflow_dispatch:
     inputs:
       az-subscription-id:
+        name: Azure Subscription ID
         description: "Azure Subscription ID"
         required: true
 
@@ -29,4 +31,4 @@ jobs:
         run: dotnet tool install -g azure-cost-cli
 
       - name: Run Azure Cost CLI
-        run: azure-cost accumulatedCost -o markdown --subscription '8d0248a2-d875-4407-99a6-0981fe09bff2' >> cost.md
+        run: azure-cost accumulatedCost -o markdown --subscription ${{ inputs.az-subscription-id}} >> cost.md

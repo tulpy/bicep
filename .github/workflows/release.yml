@@ -94,13 +94,13 @@ jobs:
   # If you need additional environments, make a copy of the code block below and update at least the environmentName for each environment.
   deploy_Sbx:
     name: Sandbox
-    uses: ./.github/workflows/deploy.yml
+    uses: ./.github/workflows/deploy-sub.yml
     concurrency: "deploy"
     needs:
       - build-infrastructure
     with:
       artefactName: infrastructure
-      environmentName: sbx
+      environment: sbx
       location: ${{ vars.LOCATION }}
       moduleName: "ModuleName"
     secrets: inherit
