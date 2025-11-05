@@ -1,7 +1,7 @@
 using './gitHubOIDC.bicep'
 
-param gitHubOwner = 'Insight-Services-APAC'
-param gitHubRepo = 'azure-landing-zones-perth-extended-zone'
+param gitHubOwner = 'tulpy'
+param gitHubRepo = 'Bicep'
 
 param gitHubConfiguration = [
   {
