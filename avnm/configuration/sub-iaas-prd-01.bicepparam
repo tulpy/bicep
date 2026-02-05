@@ -21,7 +21,7 @@ param virtualNetworkConfiguration = {
   ipamPoolNumberOfIpAddresses: '256' // /24
   dnsServers: [
     '10.4.0.68'
-  ]
+  ]                                                           
   deployPeering: true
   peeringSettings: {
     allowForwardedTraffic: true
